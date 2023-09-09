@@ -11,6 +11,13 @@
         "esp_vfs.h": "c",
         "esp_spiffs.h": "c",
         "sdkconfig.h": "c",
-        "dirent.h": "c"
+        "dirent.h": "c",
+        "stdlib.h": "c",
+        "unistd.h": "c",
+        "esp_http_server.h": "c",
+        "esp_tls.h": "c",
+        "ledc.h": "c",
+        "rgb_led.h": "c",
+        "stdbool.h": "c"
     }
 }

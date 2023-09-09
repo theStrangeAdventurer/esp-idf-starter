@@ -6,7 +6,6 @@
    software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
    CONDITIONS OF ANY KIND, either express or implied.
 */
-/* Wifi softAP includes  >>> */
 #include "sdkconfig.h"
 #include <string.h>
 #include "freertos/FreeRTOS.h"
@@ -16,12 +15,8 @@
 #include "esp_event.h"
 #include "esp_log.h"
 #include "nvs_flash.h"
-
 #include "lwip/err.h"
 #include "lwip/sys.h"
-/* <<< Wifi softAP includes  */
-
-/* Web server includes  >>> */
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/param.h>
@@ -29,10 +24,10 @@
 #include <esp_http_server.h>
 #include "esp_tls.h"
 #include <esp_system.h>
-/* <<<< Web server includes */
 
 /* GPIO >> */
 #include "driver/gpio.h"
+#include "rgb_led.h"
 /* << GPIO */
 
 /* FS >>*/
@@ -93,7 +88,6 @@ esp_err_t init_fs(void)
     return ESP_OK;
 }
 /* configure FS */
-
 
 #define CHECK_FILE_EXTENSION(filename, ext) (strcasecmp(&filename[strlen(filename) - strlen(ext)], ext) == 0)
 
@@ -326,6 +320,7 @@ static void connect_handler(void* arg, esp_event_base_t event_base,
         ESP_LOGI(TAG, "Starting webserver");
         *server = start_webserver(CONFIG_EXAMPLE_WEB_MOUNT_POINT);
         led_on();
+        rgb_led_wifi_connected();
     }
 }
 

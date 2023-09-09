@@ -1,4 +1,4 @@
-idf_component_register(SRCS "app_main.c"
+idf_component_register(SRCS "app_main.c" "rgb_led.c"
                     INCLUDE_DIRS ".")
 
 set(WEB_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../frontend-app")
