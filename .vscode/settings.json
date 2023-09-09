@@ -7,6 +7,10 @@
         "esp_netif.h": "c",
         "esp_wifi.h": "c",
         "esp_system.h": "c",
-        "*.tcc": "c"
+        "*.tcc": "c",
+        "esp_vfs.h": "c",
+        "esp_spiffs.h": "c",
+        "sdkconfig.h": "c",
+        "dirent.h": "c"
     }
 }

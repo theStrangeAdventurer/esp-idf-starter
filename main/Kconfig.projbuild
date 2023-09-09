@@ -23,4 +23,29 @@ menu "Example Configuration"
         default 4
         help
             Max number of the STA connects to AP.
+    
+    config EXAMPLE_WEB_MOUNT_POINT
+        string "Website mount point in VFS"
+        default "/www"
+        help
+            Specify the mount point in VFS.
+
+    config PARTITION_TABLE_CUSTOM_FILENAME
+        string "PARTITION_TABLE_CUSTOM_FILENAME"
+        default "partitions_example.csv"
+        help
+            PARTITION_TABLE_CUSTOM_FILENAME
+
+    config PARTITION_TABLE_FILENAME
+        string "PARTITION_TABLE_CUSTOM_FILENAME"
+        default "partitions_example.csv"
+        help
+            PARTITION_TABLE_FILENAME
+
+    config SPIFFS_OBJ_NAME_LEN
+        int "SPIFFS_OBJ_NAME_LEN"
+        default 128
+        help
+            SPIFFS_OBJ_NAME_LEN
+
 endmenu

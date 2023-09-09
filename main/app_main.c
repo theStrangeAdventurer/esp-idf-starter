@@ -7,6 +7,7 @@
    CONDITIONS OF ANY KIND, either express or implied.
 */
 /* Wifi softAP includes  >>> */
+#include "sdkconfig.h"
 #include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -30,10 +31,19 @@
 #include <esp_system.h>
 /* <<<< Web server includes */
 
-/* GPIO and fs >> */
+/* GPIO >> */
 #include "driver/gpio.h"
 /* << GPIO */
 
+/* FS >>*/
+#include "esp_spiffs.h"
+#include "esp_vfs.h"
+#include <dirent.h>
+/* << FS*/
+
+/* Max length a file path can have on storage */
+#define FILE_PATH_MAX (ESP_VFS_PATH_MAX + CONFIG_SPIFFS_OBJ_NAME_LEN)
+#define SCRATCH_BUFSIZE (10240)
 
 /* The examples use WiFi configuration that you can set via project configuration menu.
 
@@ -50,6 +60,42 @@
 #define LED GPIO_NUM_2
 
 static const char *TAG = "app"; // Tag for logger
+
+/* configure FS */
+esp_err_t init_fs(void)
+{
+    esp_vfs_spiffs_conf_t conf = {
+        .base_path = CONFIG_EXAMPLE_WEB_MOUNT_POINT,
+        .partition_label = NULL,
+        .max_files = 5,
+        .format_if_mount_failed = false
+    };
+    esp_err_t ret = esp_vfs_spiffs_register(&conf);
+
+    if (ret != ESP_OK) {
+        if (ret == ESP_FAIL) {
+            ESP_LOGE(TAG, "Failed to mount or format filesystem");
+        } else if (ret == ESP_ERR_NOT_FOUND) {
+            ESP_LOGE(TAG, "Failed to find SPIFFS partition");
+        } else {
+            ESP_LOGE(TAG, "Failed to initialize SPIFFS (%s)", esp_err_to_name(ret));
+        }
+        return ESP_FAIL;
+    }
+
+    size_t total = 0, used = 0;
+    ret = esp_spiffs_info(NULL, &total, &used);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to get SPIFFS partition information (%s)", esp_err_to_name(ret));
+    } else {
+        ESP_LOGI(TAG, "Partition size: total: %d, used: %d", total, used);
+    }
+    return ESP_OK;
+}
+/* configure FS */
+
+
+#define CHECK_FILE_EXTENSION(filename, ext) (strcasecmp(&filename[strlen(filename) - strlen(ext)], ext) == 0)
 
 /* configure LED pin */
 void configure_led() {
@@ -128,33 +174,120 @@ void wifi_init_softap(void)
              EXAMPLE_ESP_WIFI_SSID, EXAMPLE_ESP_WIFI_PASS, EXAMPLE_ESP_WIFI_CHANNEL);
 }
 
+/**
+ * HTTP Server >>>>
+*/
+
+/* Server Context */
+typedef struct rest_server_context {
+    char base_path[ESP_VFS_PATH_MAX + 1];
+    char scratch[SCRATCH_BUFSIZE];
+} rest_server_context_t;
+/* Server Context */
+
+/* Set HTTP response content type according to file extension */
+static esp_err_t set_content_type_from_file(httpd_req_t *req, const char *filepath)
+{
+    const char *type = "text/plain";
+    if (CHECK_FILE_EXTENSION(filepath, ".html")) {
+        type = "text/html";
+    } else if (CHECK_FILE_EXTENSION(filepath, ".js")) {
+        type = "application/javascript";
+    } else if (CHECK_FILE_EXTENSION(filepath, ".css")) {
+        type = "text/css";
+    } else if (CHECK_FILE_EXTENSION(filepath, ".png")) {
+        type = "image/png";
+    } else if (CHECK_FILE_EXTENSION(filepath, ".ico")) {
+        type = "image/x-icon";
+    } else if (CHECK_FILE_EXTENSION(filepath, ".svg")) {
+        type = "text/xml";
+    }
+    return httpd_resp_set_type(req, type);
+}
+
 /* An HTTP GET handler */
 static esp_err_t root_get_handler(httpd_req_t *req)
 {
-    const char* resp = "<!DOCTYPE html><html lang='en'><head><meta charset='UTF-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'><title>Document</title></head><body><h1>Hello</h1></body></html>";
-    httpd_resp_send(req, resp, HTTPD_RESP_USE_STRLEN);
+    char filepath[FILE_PATH_MAX];
+    
+    // Достаем из запроса контекст
+    rest_server_context_t *rest_context = (rest_server_context_t *)req->user_ctx;
+    
+    // Копируем base_path (CONFIG_EXAMPLE_WEB_MOUNT_POINT "/www") в filepath
+    strlcpy(filepath, rest_context->base_path, sizeof(filepath));
 
+    if (req->uri[strlen(req->uri) - 1] == '/') { // Добавляем /index.html к пути, если путь кончается на /
+        strlcat(filepath, "/index.html", sizeof(filepath));
+    } else {
+        strlcat(filepath, req->uri, sizeof(filepath));
+    }
+    int fd = open(filepath, O_RDONLY, 0);
+    if (fd == -1) {
+        ESP_LOGE(TAG, "Failed to open file : %s", filepath);
+        /* Respond with 500 Internal Server Error */
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to read existing file");
+        return ESP_FAIL;
+    }
+
+    set_content_type_from_file(req, filepath);
+
+    char *chunk = rest_context->scratch;
+    ssize_t read_bytes;
+    do {
+        /* Read file in chunks into the scratch buffer */
+        read_bytes = read(fd, chunk, SCRATCH_BUFSIZE);
+        if (read_bytes == -1) {
+            ESP_LOGE(TAG, "Failed to read file : %s", filepath);
+        } else if (read_bytes > 0) { // Отправляем чанки пользователю, пока что-то считывается
+            /* Send the buffer contents as HTTP response chunk */
+            if (httpd_resp_send_chunk(req, chunk, read_bytes) != ESP_OK) {
+                close(fd);
+                ESP_LOGE(TAG, "File sending failed!");
+                /* Abort sending file */
+                httpd_resp_sendstr_chunk(req, NULL);
+                /* Respond with 500 Internal Server Error */
+                httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to send file");
+                return ESP_FAIL;
+            }
+        }
+    } while (read_bytes > 0);
+    /* Close file after sending complete */
+    close(fd);
+    ESP_LOGI(TAG, "File sending complete");
+    /* Respond with an empty chunk to signal HTTP response completion */
+    httpd_resp_send_chunk(req, NULL, 0); // Завершаем коннекшн
     return ESP_OK;
 }
 
-static const httpd_uri_t base_handler = {
-    .uri       = "/",
-    .method    = HTTP_GET, 
-    .handler   = root_get_handler,
-};
-
-static httpd_handle_t start_webserver(void)
+static httpd_handle_t start_webserver(const char *base_path)
 {
     httpd_handle_t server = NULL;
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
+    rest_server_context_t *rest_context = calloc(1, sizeof(rest_server_context_t));
     
+    if (rest_context == NULL) {
+        ESP_LOGE(TAG, "Failed to allocate rest_context memory");
+        return NULL;
+    }
+  
+    strlcpy(rest_context->base_path, base_path, sizeof(rest_context->base_path));
+
     config.lru_purge_enable = true;
+    config.uri_match_fn = httpd_uri_match_wildcard;
 
     // Start the httpd server
     ESP_LOGI(TAG, "Starting server on port: '%d'", config.server_port);
     if (httpd_start(&server, &config) == ESP_OK) {
         // Set URI handlers
         ESP_LOGI(TAG, "Registering URI handlers");
+
+        httpd_uri_t base_handler = {
+            .uri = "/*",
+            .method    = HTTP_GET, 
+            .handler   = root_get_handler,
+            .user_ctx = rest_context
+        };
+
         httpd_register_uri_handler(server, &base_handler);
         return server;
     }
@@ -191,7 +324,7 @@ static void connect_handler(void* arg, esp_event_base_t event_base,
     httpd_handle_t* server = (httpd_handle_t*) arg;
     if (*server == NULL) {
         ESP_LOGI(TAG, "Starting webserver");
-        *server = start_webserver();
+        *server = start_webserver(CONFIG_EXAMPLE_WEB_MOUNT_POINT);
         led_on();
     }
 }
@@ -213,6 +346,7 @@ void app_main(void)
     wifi_init_softap();
 
     ESP_ERROR_CHECK(esp_netif_init());
+    ESP_ERROR_CHECK(init_fs());
 
     /*
      * Starting web server when user connected to wi-fi
