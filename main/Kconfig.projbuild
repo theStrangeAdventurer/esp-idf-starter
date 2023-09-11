@@ -24,7 +24,7 @@ menu "Example Configuration"
         help
             Max number of the STA connects to AP.
     
-    config EXAMPLE_WEB_MOUNT_POINT
+    config WEB_MOUNT_POINT
         string "Website mount point in VFS"
         default "/www"
         help
@@ -32,13 +32,13 @@ menu "Example Configuration"
 
     config PARTITION_TABLE_CUSTOM_FILENAME
         string "PARTITION_TABLE_CUSTOM_FILENAME"
-        default "partitions_example.csv"
+        default "partitions_webapp.csv"
         help
             PARTITION_TABLE_CUSTOM_FILENAME
 
     config PARTITION_TABLE_FILENAME
-        string "PARTITION_TABLE_CUSTOM_FILENAME"
-        default "partitions_example.csv"
+        string "PARTITION_TABLE_FILENAME"
+        default "partitions_webapp.csv"
         help
             PARTITION_TABLE_FILENAME
 

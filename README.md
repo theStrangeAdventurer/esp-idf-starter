@@ -3,6 +3,10 @@
 
 ### Build and Flash
 
+0. `idf.py menuconfig`, then *Serial flasher config* > *Flash size*, set `4mb`
+1. `idf.py menuconfig`, then change *PARTITION_TABLE_FILENAME* and *PARTITION_TABLE_CUSTOM_FILENAME* to `partitions_webapp.csv`
+2. `vi $IDF_PATH/components/partition_table/partitions_webapp.csv` and paste content from `partitions_webapp.csv`
+
 Build the project and flash it to the board, then run the monitor tool to view the serial output:
 
 Run `idf.py -p PORT flash monitor` to build, flash and monitor the project.
@@ -17,4 +21,4 @@ See the Getting Started Guide for all the steps to configure and use the ESP-IDF
 
 ## Troubleshooting
 
-0. `partitions_example.csv not found in ....`. Please Run command `vi $IDF_PATH/components/partition_table/partitions_example.csv` and paste content from partitions_example.csv
+0. `partitions_webapp.csv not found in ....`. Please Run command `vi $IDF_PATH/components/partition_table/partitions_webapp.csv` and paste content from partitions_webapp.csv

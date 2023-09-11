@@ -43,14 +43,14 @@
 /* The examples use WiFi configuration that you can set via project configuration menu.
 
    If you'd rather not, just change the below entries to strings with
-   the config you want - ie #define EXAMPLE_WIFI_SSID "mywifissid"
+   the config you want - ie #define WIFI_SSID "mywifissid"
 */
-#define EXAMPLE_ESP_WIFI_SSID      CONFIG_ESP_WIFI_SSID
-#define EXAMPLE_ESP_WIFI_PASS      CONFIG_ESP_WIFI_PASSWORD
-#define EXAMPLE_ESP_WIFI_CHANNEL   CONFIG_ESP_WIFI_CHANNEL
-#define EXAMPLE_MAX_STA_CONN       CONFIG_ESP_MAX_STA_CONN
+#define ESP_WIFI_SSID      CONFIG_ESP_WIFI_SSID
+#define ESP_WIFI_PASS      CONFIG_ESP_WIFI_PASSWORD
+#define ESP_WIFI_CHANNEL   CONFIG_ESP_WIFI_CHANNEL
+#define MAX_STA_CONN       CONFIG_ESP_MAX_STA_CONN
 
-#define EXAMPLE_HTTP_QUERY_KEY_MAX_LEN  (64)
+#define HTTP_QUERY_KEY_MAX_LEN  (64)
 
 #define LED GPIO_NUM_2
 
@@ -60,7 +60,7 @@ static const char *TAG = "app"; // Tag for logger
 esp_err_t init_fs(void)
 {
     esp_vfs_spiffs_conf_t conf = {
-        .base_path = CONFIG_EXAMPLE_WEB_MOUNT_POINT,
+        .base_path = CONFIG_WEB_MOUNT_POINT,
         .partition_label = NULL,
         .max_files = 5,
         .format_if_mount_failed = false
@@ -140,11 +140,11 @@ void wifi_init_softap(void)
 
     wifi_config_t wifi_config = {
         .ap = {
-            .ssid = EXAMPLE_ESP_WIFI_SSID,
-            .ssid_len = strlen(EXAMPLE_ESP_WIFI_SSID),
-            .channel = EXAMPLE_ESP_WIFI_CHANNEL,
-            .password = EXAMPLE_ESP_WIFI_PASS,
-            .max_connection = EXAMPLE_MAX_STA_CONN,
+            .ssid = ESP_WIFI_SSID,
+            .ssid_len = strlen(ESP_WIFI_SSID),
+            .channel = ESP_WIFI_CHANNEL,
+            .password = ESP_WIFI_PASS,
+            .max_connection = MAX_STA_CONN,
 #ifdef CONFIG_ESP_WIFI_SOFTAP_SAE_SUPPORT
             .authmode = WIFI_AUTH_WPA3_PSK,
             .sae_pwe_h2e = WPA3_SAE_PWE_BOTH,
@@ -156,7 +156,7 @@ void wifi_init_softap(void)
             },
         },
     };
-    if (strlen(EXAMPLE_ESP_WIFI_PASS) == 0) {
+    if (strlen(ESP_WIFI_PASS) == 0) {
         wifi_config.ap.authmode = WIFI_AUTH_OPEN;
     }
 
@@ -165,7 +165,7 @@ void wifi_init_softap(void)
     ESP_ERROR_CHECK(esp_wifi_start());
 
     ESP_LOGI(TAG, "wifi_init_softap finished. SSID:%s password:%s channel:%d",
-             EXAMPLE_ESP_WIFI_SSID, EXAMPLE_ESP_WIFI_PASS, EXAMPLE_ESP_WIFI_CHANNEL);
+             ESP_WIFI_SSID, ESP_WIFI_PASS, ESP_WIFI_CHANNEL);
 }
 
 /**
@@ -207,7 +207,7 @@ static esp_err_t root_get_handler(httpd_req_t *req)
     // Достаем из запроса контекст
     rest_server_context_t *rest_context = (rest_server_context_t *)req->user_ctx;
     
-    // Копируем base_path (CONFIG_EXAMPLE_WEB_MOUNT_POINT "/www") в filepath
+    // Копируем base_path (CONFIG_WEB_MOUNT_POINT "/www") в filepath
     strlcpy(filepath, rest_context->base_path, sizeof(filepath));
 
     if (req->uri[strlen(req->uri) - 1] == '/') { // Добавляем /index.html к пути, если путь кончается на /
@@ -318,7 +318,7 @@ static void connect_handler(void* arg, esp_event_base_t event_base,
     httpd_handle_t* server = (httpd_handle_t*) arg;
     if (*server == NULL) {
         ESP_LOGI(TAG, "Starting webserver");
-        *server = start_webserver(CONFIG_EXAMPLE_WEB_MOUNT_POINT);
+        *server = start_webserver(CONFIG_WEB_MOUNT_POINT);
         led_on();
         rgb_led_wifi_connected();
     }
