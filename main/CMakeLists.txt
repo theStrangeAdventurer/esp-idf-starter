@@ -1,5 +1,5 @@
 idf_component_register(
-    SRCS "main.c" "led/rgb_led.c" "server.c"
+    SRCS "main.c" "led/rgb_led.c" "server.c" "wifi.c"
     INCLUDE_DIRS "." "led"
 )
 
