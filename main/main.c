@@ -28,12 +28,6 @@
 #include "rgb_led.h"
 /* << GPIO */
 
-/* FS >>*/
-#include "esp_spiffs.h"
-#include "esp_vfs.h"
-#include <dirent.h>
-/* << FS*/
-
 #define HTTP_QUERY_KEY_MAX_LEN  (64)
 
 #define LED GPIO_NUM_2
@@ -49,38 +43,9 @@ esp_err_t stop_webserver(httpd_handle_t server);
 void wifi_init_softap(void);
 /* << Definitions for wifi.c file */
 
-/* configure FS */
-esp_err_t init_fs(void)
-{
-    esp_vfs_spiffs_conf_t conf = {
-        .base_path = CONFIG_WEB_MOUNT_POINT,
-        .partition_label = NULL,
-        .max_files = 5,
-        .format_if_mount_failed = false
-    };
-    esp_err_t ret = esp_vfs_spiffs_register(&conf);
-
-    if (ret != ESP_OK) {
-        if (ret == ESP_FAIL) {
-            ESP_LOGE(TAG, "Failed to mount or format filesystem");
-        } else if (ret == ESP_ERR_NOT_FOUND) {
-            ESP_LOGE(TAG, "Failed to find SPIFFS partition");
-        } else {
-            ESP_LOGE(TAG, "Failed to initialize SPIFFS (%s)", esp_err_to_name(ret));
-        }
-        return ESP_FAIL;
-    }
-
-    size_t total = 0, used = 0;
-    ret = esp_spiffs_info(NULL, &total, &used);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to get SPIFFS partition information (%s)", esp_err_to_name(ret));
-    } else {
-        ESP_LOGI(TAG, "Partition size: total: %d, used: %d", total, used);
-    }
-    return ESP_OK;
-}
-/* configure FS */
+/* Definitions for fs.c file >> */
+esp_err_t init_fs(void);
+/* << Definitions for fs.c file */
 
 /* configure LED pin */
 void configure_led() {
@@ -100,9 +65,7 @@ void led_off() {
 
 /* configure LED pin */
 
-/**
- * HTTP Server handlers
- */
+/* HTTP Server handlers >> */
 static void disconnect_handler(void* arg, esp_event_base_t event_base,
                                int32_t event_id, void* event_data)
 {
@@ -130,6 +93,7 @@ static void connect_handler(void* arg, esp_event_base_t event_base,
         rgb_led_wifi_connected();
     }
 }
+/* << HTTP Server handlers */
 
 void app_main(void)
 {
