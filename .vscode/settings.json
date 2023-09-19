@@ -19,5 +19,7 @@
         "ledc.h": "c",
         "rgb_led.h": "c",
         "stdbool.h": "c"
-    }
+    },
+    "idf.adapterTargetName": "esp32",
+    "idf.port": "/dev/tty.usbserial-0001"
 }
