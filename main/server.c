@@ -14,7 +14,7 @@ typedef struct rest_server_context {
 } rest_server_context_t;
 /* Server Context */
 
-static const char *TAG = "appServer"; // Tag for logger
+static const char *TAG = "app_Server"; // Tag for logger
 
 /* Set HTTP response content type according to file extension */
 static esp_err_t set_content_type_from_file(httpd_req_t *req, const char *filepath)

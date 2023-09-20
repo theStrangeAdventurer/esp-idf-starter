@@ -1,6 +1,6 @@
 idf_component_register(
-    SRCS "main.c" "led/rgb_led.c" "server.c" "wifi.c" "fs.c"
-    INCLUDE_DIRS "." "led"
+    SRCS "main.c" "led/rgb_led.c" "server.c" "wifi.c" "fs.c" "lcd1602/i2c-lcd.c"
+    INCLUDE_DIRS "." "led" "lcd1602"
 )
 
 set(WEB_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../frontend-app")

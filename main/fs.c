@@ -3,7 +3,7 @@
 #include <dirent.h>
 #include "esp_log.h"
 
-static const char *TAG = "appFs"; // Tag for logger
+static const char *TAG = "app_FS"; // Tag for logger
 
 esp_err_t init_fs(void)
 {
