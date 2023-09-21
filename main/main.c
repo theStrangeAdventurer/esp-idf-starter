@@ -23,6 +23,7 @@
 #include <esp_http_server.h>
 #include "esp_tls.h"
 #include <esp_system.h>
+#include "utils.h"
 
 /* LCD 1602 >> */
 #include "i2c-lcd.h"
@@ -145,7 +146,6 @@ static void connect_handler(void* arg, esp_event_base_t event_base,
         client_connected = 1;
         write_lcd_message();
         led_on();
-        rgb_led_wifi_connected();
     }
 }
 /* << HTTP Server handlers */
@@ -158,6 +158,7 @@ static void adc_callback(int x, int y)
     if (check_is_center_position_x(x) && check_is_center_position_y(y)) {
         if (!last_lcd_message_type) {
             write_lcd_message();
+            rgb_led_set_color(255, 255, 255);
             last_lcd_message_type = 1;
         }
         return;
@@ -171,10 +172,20 @@ static void adc_callback(int x, int y)
 
     char message[100];
 
-    snprintf(message, sizeof(message), "x=%d, y=%d", x, y);
+    // Переводим значение в uint_8 (0-255)
+    int mapped_x = map_value(x, 512, 255);
+    int mapped_y = map_value(y, 512, 255);
 
+    snprintf(
+        message,
+        sizeof(message),
+        "x=%d, y=%d",
+        mapped_x,
+        mapped_y
+    );
+    rgb_led_set_color(125, mapped_x, mapped_y);
     lcd_send_string(message);
-    ESP_LOGI(TAG, "MAIN CALLBACK CALLED WITH ARGS: %d %d", x, y);
+    ESP_LOGI(TAG, "%s", message);
 }
 /* ADC Handler */
 
@@ -204,6 +215,7 @@ void app_main(void)
     ESP_ERROR_CHECK(init_fs());
 
     init_adc(adc_callback);
+    rgb_led_set_color(255, 255, 255);
 
     /*
      * Starting web server when user connected to wi-fi

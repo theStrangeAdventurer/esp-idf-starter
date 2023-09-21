@@ -3,6 +3,15 @@
 #include "driver/ledc.h"
 #include "rgb_led.h"
 
+
+// RGB led GPIOs 
+#define RGB_LED_RED_GPIO    27
+#define RGB_LED_GREEN_GPIO  26
+#define RGB_LED_BLUE_GPIO   25
+
+// RGB led color mix channels
+#define RGB_LED_CHANNEL_NUM 3
+
 bool g_pwm_init_handle = false;
 
 rgb_ledc_t ledc_ch[RGB_LED_CHANNEL_NUM];
@@ -67,7 +76,10 @@ static void rgb_led_pwm_init(void) {
 /**
  * Set rgb color function
  */
-static void rgb_led_set_color(uint8_t red, uint8_t green, uint8_t blue) {
+void rgb_led_set_color(uint8_t red, uint8_t green, uint8_t blue) {
+    if (g_pwm_init_handle == false) {
+        rgb_led_pwm_init(); // Initializing led pwm if not yet initialized
+    }
     ledc_set_duty(ledc_ch[0].mode, ledc_ch[0].channel, red);
     ledc_update_duty(ledc_ch[0].mode, ledc_ch[0].channel);
 
@@ -76,11 +88,4 @@ static void rgb_led_set_color(uint8_t red, uint8_t green, uint8_t blue) {
 
     ledc_set_duty(ledc_ch[2].mode, ledc_ch[2].channel, blue);
     ledc_update_duty(ledc_ch[2].mode, ledc_ch[2].channel);
-}
-
-void rgb_led_wifi_connected(void) {
-    if (g_pwm_init_handle == false) {
-        rgb_led_pwm_init(); // Initializing led pwm if not yet initialized
-    }
-    rgb_led_set_color(0, 102, 0); // Light Green
 }
