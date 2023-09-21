@@ -18,6 +18,7 @@
 #include "lwip/sys.h"
 #include <stdlib.h>
 #include <unistd.h>
+#include <stdio.h>
 #include <sys/param.h>
 #include <esp_http_server.h>
 #include "esp_tls.h"
@@ -27,6 +28,10 @@
 #include "i2c-lcd.h"
 #include "driver/i2c.h"
 /* << LCD 1602 */
+
+/* ADC read (Joystick) >> */
+#include "adc-read.h"
+/* << ADC read (Joystick) */
 
 /* GPIO >> */
 #include "driver/gpio.h"
@@ -38,6 +43,8 @@
 #define LED GPIO_NUM_2
 
 static const char *TAG = "app_Main"; // Tag for logger
+
+static int client_connected = 0;
 
 /* Definitions for server.c file >> */
 httpd_handle_t start_webserver(const char *base_path);
@@ -93,6 +100,22 @@ void led_off() {
 
 /* configure LED pin */
 
+static void write_lcd_message()
+{
+    lcd_clear();
+    lcd_put_cur(0, 0);
+
+    if (client_connected) {
+        lcd_send_string("Connected!");
+        lcd_put_cur(1, 0);
+        lcd_send_string("IP: 192.168.4.1");
+    } else {
+        lcd_send_string("Awaiting ");
+        lcd_put_cur(1, 0);
+        lcd_send_string("connection...");
+    }
+}
+
 /* HTTP Server handlers >> */
 static void disconnect_handler(void* arg, esp_event_base_t event_base,
                                int32_t event_id, void* event_data)
@@ -102,12 +125,9 @@ static void disconnect_handler(void* arg, esp_event_base_t event_base,
         ESP_LOGI(TAG, "Stopping webserver");
         if (stop_webserver(*server) == ESP_OK) {
             *server = NULL;
+            client_connected = 0;
             led_off();
-            lcd_clear();
-            lcd_put_cur(0, 0);
-            lcd_send_string("Awaiting ");
-            lcd_put_cur(1, 0);
-            lcd_send_string("connection...");
+            write_lcd_message();
         } else {
             ESP_LOGE(TAG, "Failed to stop http server");
         }
@@ -122,18 +142,41 @@ static void connect_handler(void* arg, esp_event_base_t event_base,
     if (*server == NULL) {
         ESP_LOGI(TAG, "Starting webserver");
         *server = start_webserver(CONFIG_WEB_MOUNT_POINT);
-
-        lcd_put_cur(0, 0);
-        lcd_send_string("Connected!");
-
-        lcd_put_cur(1, 0);
-        lcd_send_string("IP: 192.168.4.1");
-
+        client_connected = 1;
+        write_lcd_message();
         led_on();
         rgb_led_wifi_connected();
     }
 }
 /* << HTTP Server handlers */
+
+static int last_lcd_message_type = 0; // 0 - Сообщение о статусе подключения. 1 - Сообщение о координатах
+
+/* ADC Handler */
+static void adc_callback(int x, int y)
+{
+    if (check_is_center_position_x(x) && check_is_center_position_y(y)) {
+        if (!last_lcd_message_type) {
+            write_lcd_message();
+            last_lcd_message_type = 1;
+        }
+        return;
+    }
+    last_lcd_message_type = 0;
+
+    lcd_clear();
+    lcd_put_cur(0, 0);
+    lcd_send_string("Stick:");
+    lcd_put_cur(1, 0);
+
+    char message[100];
+
+    snprintf(message, sizeof(message), "x=%d, y=%d", x, y);
+
+    lcd_send_string(message);
+    ESP_LOGI(TAG, "MAIN CALLBACK CALLED WITH ARGS: %d %d", x, y);
+}
+/* ADC Handler */
 
 void app_main(void)
 {
@@ -145,12 +188,7 @@ void app_main(void)
     ESP_ERROR_CHECK(i2c_master_init());
     ESP_LOGI(TAG, "I2C initialized successfully");
     lcd_init();
-    lcd_clear();
-    lcd_put_cur(0, 0);
-    lcd_send_string("Awaiting");
-    lcd_put_cur(1, 0);
-    lcd_send_string("connection...");
-
+    write_lcd_message();
     // Initialize NVS
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
@@ -164,6 +202,8 @@ void app_main(void)
 
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(init_fs());
+
+    init_adc(adc_callback);
 
     /*
      * Starting web server when user connected to wi-fi

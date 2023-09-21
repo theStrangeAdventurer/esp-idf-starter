@@ -18,7 +18,13 @@
         "esp_tls.h": "c",
         "ledc.h": "c",
         "rgb_led.h": "c",
-        "stdbool.h": "c"
+        "stdbool.h": "c",
+        "adc_continuous.h": "c",
+        "err.h": "c",
+        "esp_err.h": "c",
+        "freertos.h": "c",
+        "adc_oneshot.h": "c",
+        "stdio.h": "c"
     },
     "idf.adapterTargetName": "esp32",
     "idf.port": "/dev/tty.usbserial-0001"

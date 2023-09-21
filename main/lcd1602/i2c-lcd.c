@@ -11,7 +11,8 @@ esp_err_t err;
 
 #define I2C_NUM I2C_NUM_0
 
-static const char *TAG = "LCD";
+static const char *TAG = "app_LCD";
+
 
 void lcd_send_cmd (char cmd)
 {
